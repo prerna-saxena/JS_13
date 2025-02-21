@@ -1,0 +1,176 @@
+Function binding
+
+Losing “this”
+We’ve already seen examples of losing this. Once a method is passed somewhere separately from the object – this is lost.
+
+Here’s how it may happen with setTimeout:
+
+let user = {
+  firstName: "John",
+  sayHi() {
+    alert(`Hello, ${this.firstName}!`);
+  }
+};
+
+setTimeout(user.sayHi, 1000); // HellO
+
+As we can see, the output shows not “John” as this.firstName, but undefined!
+That’s because setTimeout got the function user.sayHi, separately from the object.
+
+let f = user.sayHi;
+setTimeout(f, 1000); // lost user context
+
+The loss of this context in JavaScript is a common source of confusion and bugs.  It happens when the way a function is called changes the value of this inside that function.  Here are some common scenarios and how to address them:
+
+1. Regular Function Calls (in non-strict mode):
+
+In non-strict mode, if a regular function is called directly (not as a method of an object), this will default to the global object (window in browsers, global in Node.js). This is often not what you intend.
+
+JavaScript
+
+function myFunction() {
+  console.log(this); // In a browser: window, in Node.js: global
+}
+
+myFunction(); // Direct call
+
+const obj = {
+  myMethod: myFunction // Assigning the function to a method
+};
+
+obj.myMethod(); // Called as a method: this refers to obj
+2. Regular Function Calls (in strict mode):
+
+In strict mode, this will be undefined when a regular function is called directly. This is generally considered safer.
+
+JavaScript
+
+"use strict"; // Strict mode
+
+function myFunction() {
+  console.log(this); // undefined
+}
+
+myFunction(); // Direct call
+3. Callbacks:
+
+Callbacks are functions passed as arguments to other functions.  The context of this within a callback can be tricky because the calling function often determines the this value.
+
+JavaScript
+
+const myObj = {
+  name: "Example",
+  greet: function(callback) {
+    callback(); // The 'this' context is determined by how callback is eventually called.
+  }
+};
+
+myObj.greet(function() {
+  console.log("Hello, " + this.name); // 'this' might be window or undefined, not myObj!
+});
+
+// Solutions:
+
+// a) Arrow functions (lexical 'this'):
+myObj.greet(() => {
+  console.log("Hello, " + this.name); // 'this' will correctly refer to myObj (if greet itself was not an arrow function)
+});
+
+// b) `bind()`:
+const boundGreet = function() {
+  console.log("Hello, " + this.name);
+}.bind(myObj); // Creates a new function with 'this' bound to myObj
+myObj.greet(boundGreet);
+
+// c) `call()` or `apply()`:
+myObj.greet(function() {
+  console.log("Hello, " + this.name);
+}.call(myObj)); // Calls the function with 'this' explicitly set to myObj
+
+// d) 'this' as variable
+myObj.greet(function() {
+    const self = this; // 'this' at outer scope
+    setTimeout(function() {
+        console.log("Hello, " + self.name); // use self
+    }, 100)
+}.call(myObj));
+
+4. Event Handlers:
+
+In browser environments, when you attach event listeners, the this context within the event handler is often set to the DOM element that triggered the event.
+
+HTML
+
+<button id="myButton">Click me</button>
+
+<script>
+  const button = document.getElementById("myButton");
+  button.addEventListener("click", function() {
+    console.log(this); // Refers to the button element
+    this.textContent = "Clicked!"; // Modifies the button text
+  });
+</script>
+5. setTimeout and setInterval:
+
+The this context within functions passed to setTimeout or setInterval is often the global object (or undefined in strict mode).
+
+JavaScript
+
+const myObj = {
+  name: "Timer",
+  start: function() {
+    setTimeout(function() {
+      console.log(this.name); // 'this' is likely window or undefined
+    }, 1000);
+  }
+};
+
+myObj.start(); // Incorrect 'this'
+
+// Use arrow function, bind, call, or apply to fix this, as shown in the callback examples above.
+Key Takeaways and Solutions:
+
+Arrow functions: Do not have their own this binding. They inherit the this value from the surrounding (lexical) scope. This is often the most elegant solution for callbacks.
+bind(): Creates a new function where this is permanently bound to the value you provide.
+call() and apply(): Call a function immediately and explicitly set the this value. call() takes arguments individually, while apply() takes them as an array.
+this as variable: Store this from outer scope into a variable (self, that) and use this variable inside the callback.
+
+SOLUTION :WRAPPER
+----------------------------
+
+let user = {
+  firstName: "John",
+  sayHi() {
+    alert(`Hello, ${this.firstName}!`);
+  }
+};
+
+setTimeout(function() {
+  user.sayHi(); // Hello, John!
+}, 1000);
+
+Now it works, because it receives user from the outer lexical environment, and then calls the method normally.
+
+setTimeout(() => user.sayHi(), 1000); // Hello, John!
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Solution 2: bind
+Functions provide a built-in method bind that allows to fix this.
+
+The basic syntax is:
+
+// more complex syntax will come a little later
+let boundFunc = func.bind(context);
+
+
+The result of func.bind(context) is a special function-like “exotic object”, that is callable as function and transparently passes the call to func setting this=context.
+
+
+bind() creates a new function. It doesn't modify the original function.
+The bound function can be called later, and this will always be the bound value.
+bind() is crucial for preserving this in callbacks, event handlers, setTimeout, and setInterval.
+
+
+
+
+
+
